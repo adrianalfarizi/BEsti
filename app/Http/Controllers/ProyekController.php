@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Proyek;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 
 class ProyekController extends Controller
 {
@@ -16,7 +17,7 @@ class ProyekController extends Controller
     public function index()
     {
         $tabel_proyek = Proyek::all();
-        return view('admin.pages.proyek',['data_proyek'=>$tabel_proyek]);
+        return view('admin.pages.proyek', ['data_proyek' => $tabel_proyek]);
     }
 
     /**
@@ -37,17 +38,17 @@ class ProyekController extends Controller
      */
     public function store(Request $request)
     {
-        $data=$request->validate([
-            'nama_proyek'=>'required',
-            'tanggal_pembuatan'=>'required',
-            'lokasi_proyek'=>'required',
-            'foto_proyek'=>'required|image|mimes:jpeg,jpg,png',
+        $data = $request->validate([
+            'nama_proyek' => 'required',
+            'tanggal_pembuatan' => 'required',
+            'lokasi_proyek' => 'required',
+            'foto_proyek' => 'required|image|mimes:jpeg,jpg,png',
         ]);
 
-        if ($request->hasFile('foto_proyek')){
-            $imagename=$request->file('foto_proyek')->getClientOriginalName();
-            $request->file('foto_proyek')->move('image_proyek/',$imagename);
-            $data['foto_proyek']=$imagename;
+        if ($request->hasFile('foto_proyek')) {
+            $imagename = $request->file('foto_proyek')->getClientOriginalName();
+            $request->file('foto_proyek')->move('image_proyek/', $imagename);
+            $data['foto_proyek'] = $imagename;
         }
 
         // $data['foto_proyek']='asd';
@@ -75,7 +76,7 @@ class ProyekController extends Controller
      */
     public function edit(Proyek $proyek)
     {
-        //
+        return view('admin.pages.editproyek', ['proyek' => $proyek]);
     }
 
     /**
@@ -87,7 +88,32 @@ class ProyekController extends Controller
      */
     public function update(Request $request, Proyek $proyek)
     {
-        //
+        $request->validate([
+            'nama_proyek' => 'required',
+            'tanggal_pembuatan' => 'required',
+            'lokasi_proyek' => 'required',
+            'foto_proyek' => 'nullable|image|mimes:jpeg,jpg,png',
+        ]);
+        $data = $request->only([
+            'nama_proyek',
+            'tanggal_pembuatan',
+            'lokasi_proyek'
+        ]);
+
+        if ($request->hasFile('foto_proyek')) {
+            // Hapus gambar lama jika ada
+            if ($proyek->foto_proyek) {
+                File::delete(public_path('image_proyek') . '/' . $proyek->foto_proyek);
+            }
+
+            // Simpan gambar baru
+            $imageName = $request->file('foto_proyek')->getClientOriginalName();
+            $request->file('foto_proyek')->move('image_proyek/', $imageName);
+            $data['foto_proyek'] = $imageName;
+        }
+
+        $proyek->update($data);
+        return redirect('/proyek');
     }
 
     /**
@@ -98,6 +124,10 @@ class ProyekController extends Controller
      */
     public function destroy(Proyek $proyek)
     {
-        //
+        $data = Proyek::where('id', $proyek->id)->first();
+        File::delete(public_path('image_proyek') . '/' . $data->foto_proyek);
+        Proyek::destroy('id', $proyek->id);
+
+        return redirect('/proyek');
     }
 }
